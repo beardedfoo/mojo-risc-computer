@@ -1,0 +1,76 @@
+module ioshield_seven_segment_controller (
+    input clk,  // clock
+    input rst,  // reset
+    input data[16],
+    input ascii_data[4][8],
+    input display_mode[4],
+    input blink,
+    output io_sel[4],
+    output io_seg[8]
+  ) {
+  
+  const CTR_WIDTH = 18;
+  const BLINK_CTR_WIDTH = 26;
+  
+  .clk(clk), .rst(rst) {
+    dff ctr[CTR_WIDTH];
+    dff blink_ctr[BLINK_CTR_WIDTH];
+  }
+  
+  sig display[2];
+  sig display_data[4];
+  
+  always {
+    ctr.d = ctr.q + 1;
+    display = ctr.q[CTR_WIDTH-1:CTR_WIDTH-2];
+    case (display) {
+      0: io_sel = 4b1110;
+      1: io_sel = 4b1101;
+      2: io_sel = 4b1011;
+      3: io_sel = 4b0111;
+      default: io_sel = 4b1111;
+    }
+    
+    case (display) {
+      0: display_data = data[3:0];
+      1: display_data = data[7:4];
+      2: display_data = data[11:8];
+      3: display_data = data[15:12];
+      default: display_data = 4h0;
+    }
+
+    case (display_data) {
+      0: io_seg = 8b11000000;
+      1: io_seg = 8b11111001;
+      2: io_seg = 8b10100100;
+      3: io_seg = 8b10110000;
+      4: io_seg = 8b10011001;
+      5: io_seg = 8b10010010;
+      6: io_seg = 8b10000010;
+      7: io_seg = 8b11111000;
+      8: io_seg = 8b10000000;
+      9: io_seg = 8b10011000;
+      hA: io_seg = 8b10001000;
+      hb: io_seg = 8b10000011;
+      hc: io_seg = 8b10100111;
+      hd: io_seg = 8b10100001;
+      hE: io_seg = 8b10000110;
+      hF: io_seg = 8b10001110;
+      default: io_seg = 8b11111111;
+    }
+    
+    if (display_mode[display]) {
+      case(ascii_data[display]) {
+        "i": io_seg = 8b11111011;
+        "n": io_seg = 8b10101011;
+        " ": io_seg = 8b11111111;
+        default: io_seg = 8b00111111;
+      }
+    }
+    
+    blink_ctr.d = blink_ctr.q + 1;
+    if (blink & blink_ctr.q[BLINK_CTR_WIDTH-1]) {
+      io_seg = 8b11111111;
+    }
+  }
+}

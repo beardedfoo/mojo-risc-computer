@@ -1,0 +1,123 @@
+module decoder (
+    input inst[32],
+    signed output imm[32],
+    output funct3[3],
+    output funct7[7],    
+    output rs1[5],
+    output rs2[5],
+    output rd[5],
+    output op[7]
+  ) {
+  
+  sig opcode[7];
+  sig r_type;
+  sig i_type;
+  sig s_type;
+  sig b_type;
+  sig u_type;
+  sig j_type;
+  
+  const RS1_START = 19;
+  const RS1_END = 15;
+  const RS2_START = 24;
+  const RS2_END = 20;
+  const RD_START = 11;
+  const RD_END = 7;
+  const FUNCT7_START = 31;
+  const FUNCT7_END = 25;
+  const FUNCT3_START = 14;
+  const FUNCT3_END = 12;
+  
+  always {
+    // The opcode is always in 7 LSB
+    opcode = inst[6:0];
+    
+    // Output the current operation
+    op = opcode;
+    
+    // Default fields to 0
+    imm = 0;
+    funct3 = 0;
+    funct7 = 0;
+    rs1 = 0;
+    rs2 = 0;
+    rd = 0;
+    
+    // Each opcode needs to set the instruction type
+    r_type = 0;
+    i_type = 0;
+    s_type = 0;
+    b_type = 0;
+    u_type = 0;
+    j_type = 0;
+    
+    case (opcode) {
+      Opcode.JAL:
+        j_type = 1;
+    }
+    
+    // Map the fields for R type instructions
+    if (r_type) {
+      funct7 = inst[FUNCT7_START:FUNCT7_END];
+      rs2 = inst[RS2_START:RS2_END];
+      rs1 = inst[RS1_START:RS1_END];
+      funct3 = inst[FUNCT3_START:FUNCT3_END];
+      rd = inst[RD_START:RD_END];
+    }
+      
+    // Map the fields for I type instructions
+    if (i_type) {
+      imm[31:11] = 22x{inst[31]};
+      imm[10:5] = inst[30:25];
+      imm[5:1] = inst[24:21];
+      imm[0] = inst[20];
+      rs1 = inst[RS1_START:RS1_END];
+      funct3 = inst[FUNCT3_START:FUNCT3_END];
+      rd = inst[RD_START:RD_END];
+    }
+    
+    // Map the fields for S type instructions
+    if (s_type) {
+      imm[31:11] = 22x{inst[31]};
+      imm[10:5] = inst[30:25];
+      imm[4:1] = inst[11:8];
+      imm[0] = inst[7];
+      rs2 = inst[RS2_START:RS2_END];
+      rs1 = inst[RS1_START:RS1_END];
+      funct3 = inst[FUNCT3_START:FUNCT3_END];
+      rd = inst[RD_START:RD_END];
+    }
+    
+    // Map the fields for B type instructions
+    if (b_type) {
+      imm[31:12] = 21x{inst[31]};
+      imm[11] = inst[7];
+      imm[10:5] = inst[30:25];
+      imm[4:1] = inst[11:8];
+      imm[0] = 0;
+      rs2 = inst[RS2_START:RS2_END];
+      rs1 = inst[RS1_START:RS1_END];
+      funct3 = inst[FUNCT3_START:FUNCT3_END];
+    }
+    
+    // Map the fields for U type instructions
+    if (u_type) {
+      imm[31] = inst[31];
+      imm[30:20] = inst[30:20];
+      imm[19:12] = inst[19:12];
+      imm[11:0] = 0;
+      rd = inst[RD_START:RD_END];
+    }
+    
+    // Map the fields for J type instructions
+    if (j_type) {
+      imm[31:20] = 12x{inst[31]};
+      imm[19:12] = inst[19:12];
+      imm[11] = inst[20];
+      imm[10:5] = inst[30:25];
+      imm[4:1] = inst[24:21];
+      imm[0] = 0;
+      rd = inst[RD_START:RD_END];
+    }
+  }
+}

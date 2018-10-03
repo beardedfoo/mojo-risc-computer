@@ -1,0 +1,59 @@
+module machine (
+    input clk,  // clock
+    input rst,  // reset
+    input run,
+    output debug_address[32],
+    output debug_data[32],
+    output debug_imm[32],
+    output debug_opcode[7],
+    output debug_exception
+  ) {
+
+  .clk(clk), .rst(rst) {
+    fsm state = {NORMAL, EXCEPTION};
+    dff pc[32];
+    dff gp_regs[16][32];
+    firmware rom;
+  }                                   
+  
+  sig inst[32];
+  sig rd_data[32];
+  
+  .inst(inst) {
+    decoder inst_dec;
+  } 
+  
+  always {
+    rom.address = pc.q;
+    debug_address = pc.q;
+    debug_data = rom.data;
+    debug_imm = inst_dec.imm;
+    debug_opcode = inst_dec.op;
+    debug_exception = 0;
+    
+    rom.address = pc.q;
+    inst = rom.data;
+    
+    rd_data = gp_regs.q[inst_dec.rd];
+
+    case (state.q) {
+      state.NORMAL:
+        if (run) {
+          pc.d = pc.q + 1;
+                    
+          case (inst_dec.op) {
+            Opcode.JAL:
+              pc.d = inst_dec.imm + pc.q;
+              
+            default:
+              pc.d = pc.q;
+              debug_exception = 1;
+              state.d = state.EXCEPTION;
+          }
+        }
+      
+      state.EXCEPTION:
+        debug_exception = 1;
+    }
+  }
+}
