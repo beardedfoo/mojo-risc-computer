@@ -6,7 +6,10 @@ module machine (
     output debug_data[16],
     output debug_imm7[7],
     output debug_imm10[10],
-    output debug_opcode[7],
+    output debug_opcode[3],
+    output debug_regA[3],
+    output debug_regB[3],
+    output debug_regC[3],
     output debug_exception
   ) {
 
@@ -30,12 +33,14 @@ module machine (
     debug_imm7 = inst_dec.imm7;
     debug_imm10 = inst_dec.imm10;
     debug_opcode = inst_dec.op;
+    debug_regA = inst_dec.regA;
+    debug_regB = inst_dec.regB;
+    debug_regC = inst_dec.regC;
     debug_exception = 0;
     
     rom.address = pc.q;
     inst = rom.data;
     
-
     case (state.q) {
       state.NORMAL:
         if (run) {

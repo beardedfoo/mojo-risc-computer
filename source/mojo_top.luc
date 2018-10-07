@@ -48,6 +48,9 @@ module mojo_top (
     debugger.debug_imm10 = m.debug_imm10;
     debugger.debug_opcode = m.debug_opcode;
     debugger.exception = m.debug_exception;
+    debugger.debug_regA = m.debug_regA;
+    debugger.debug_regB = m.debug_regB;
+    debugger.debug_regC = m.debug_regC;
     led = debugger.led;
     io_led = debugger.io_led;
     io_seg = debugger.io_seg;

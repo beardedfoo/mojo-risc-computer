@@ -61,6 +61,8 @@ module ioshield_seven_segment_controller (
     
     if (display_mode[display]) {
       case(ascii_data[display]) {
+        "a": io_seg = 8b10001000;
+        "b": io_seg = 8b10000011;
         "c": io_seg = 8b10100111;
         "i": io_seg = 8b11111011;
         "p": io_seg = 8b10001100;

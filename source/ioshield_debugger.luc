@@ -6,6 +6,9 @@ module ioshield_debugger (
     input debug_imm7[7],
     input debug_imm10[10],
     input debug_data[16],
+    input debug_regA[3],
+    input debug_regB[3],
+    input debug_regC[3],
     input debug_address[16],
     input debug_opcode[3],
     input exception,
@@ -24,8 +27,9 @@ module ioshield_debugger (
     button_press_event right_btn_event;
     
     .rst(rst)  {
+      fsm decoder_submode = {INST, REG_A, REG_B, REG_C};
       dff mode_switch_timeout[25];
-      fsm state = {MENU, PC, INST, IMM};
+      fsm state = {MENU, PC, DECODER};
       ioshield_seven_segment_controller seg;
     }
   }
@@ -96,16 +100,66 @@ module ioshield_debugger (
         
         // When the right button is pressed change to the next mode
         if (right_btn_event.pressed) {
-          state.d = state.INST;
+          state.d = state.DECODER;
           mode_switch_timeout.d = MODE_CHANGED;
         }
         
-      state.INST:
-        seg.ascii_data[3] = "i";
-        seg.ascii_data[2] = "n";
-        seg.ascii_data[1] = " ";
-        seg.display_mode = 4b1110;
-        seg.data = debug_opcode;
+      state.DECODER:
+        case (decoder_submode.q) {
+          decoder_submode.INST:
+            seg.ascii_data[3] = "i";
+            seg.ascii_data[2] = "n";
+            seg.ascii_data[1] = " ";
+            seg.display_mode = 4b1110;
+            seg.data = debug_opcode;
+            
+            if (down_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_A;
+            }
+            
+          decoder_submode.REG_A:
+            seg.ascii_data[3] = "r";
+            seg.ascii_data[2] = "a";
+            seg.ascii_data[1] = " ";
+            seg.display_mode = 4b1110;
+            seg.data = debug_regA;
+            
+            if (up_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.INST;
+            }
+            
+            
+            if (down_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_B;
+            }
+            
+          decoder_submode.REG_B:
+            seg.ascii_data[3] = "r";
+            seg.ascii_data[2] = "b";
+            seg.ascii_data[1] = " ";
+            seg.display_mode = 4b1110;
+            seg.data = debug_regB;
+            
+            if (up_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_A;
+            }
+            
+            
+            if (down_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_C;
+            }
+            
+          decoder_submode.REG_C:
+            seg.ascii_data[3] = "r";
+            seg.ascii_data[2] = "c";
+            seg.ascii_data[1] = " ";
+            seg.display_mode = 4b1110;
+            seg.data = debug_regC;
+            
+            if (up_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_B;
+            }
+        }
         
         // When the left button is pressed change to the previous mode
         if (left_btn_event.pressed) {
