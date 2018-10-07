@@ -2,8 +2,10 @@
 <project name="mycpu" board="Mojo V3" language="Lucid">
   <files>
     <src>opcode.luc</src>
+    <src>button_press_event.luc</src>
     <src>firmware.luc</src>
     <src top="true">mojo_top.luc</src>
+    <src>test_decoder.luc</src>
     <src>ioshield_seven_segment_controller.luc</src>
     <src>ioshield_debugger.luc</src>
     <src>machine.luc</src>

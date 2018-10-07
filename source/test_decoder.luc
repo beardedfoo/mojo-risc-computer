@@ -1,0 +1,29 @@
+module test_decoder (
+    input clk,  // clock
+    input rst,  // reset
+    output ok
+  ) {
+
+  decoder subj;
+
+  
+  .clk(clk), .rst(rst) {
+    fsm state = {TEST_ADD, OK};
+  }
+  
+  always {
+    ok = 0;
+    subj.inst = 7hx;
+    
+    case (state.q) {
+      state.TEST_ADD:
+        subj.inst = c{Opcode.ADD, Opcode.REG1, Opcode.REG2, 7h0};
+        if (subj.op == Opcode.ADD && subj.regA == Opcode.REG1 && subj.regB == Opcode.REG2) {
+          state.d = state.q + 1;
+        }
+        
+      state.OK:
+        ok = 1;
+    }
+  }
+}

@@ -3,10 +3,11 @@ module ioshield_debugger (
     input rst,  // reset
     input io_button[5],
     input io_dip[3][8],
-    input debug_imm[32],
-    input debug_data[32],
-    input debug_address[32],
-    input debug_opcode[7],
+    input debug_imm7[7],
+    input debug_imm10[10],
+    input debug_data[16],
+    input debug_address[16],
+    input debug_opcode[3],
     input exception,
     output io_seg[8],
     output io_sel[4],
@@ -14,35 +15,34 @@ module ioshield_debugger (
     output led[8],
     output run
   ) {
-  .clk(clk)  {
+  .clk(clk) {
     // Condition the step button input and watch for rising edges
-    .in(io_button[1]) {
-      button_conditioner step_btn_cond;
-    }
-    .in(step_btn_cond.out) {
-      edge_detector step_btn_rising(#RISE(1), #FALL(0));
-    }
+    button_press_event center_btn_event;
+    button_press_event up_btn_event;
+    button_press_event down_btn_event;
+    button_press_event left_btn_event;
+    button_press_event right_btn_event;
     
-    .in(io_button[0]) {
-      button_conditioner mode_btn_cond;
-    }
-    .in(mode_btn_cond.out) {
-      edge_detector mode_btn_rising(#RISE(1), #FALL(0));
-    }
-    
-    // Condition the run switch input
-    .in(io_dip[2][7]) {
-      button_conditioner run_switch_cond;
-    }
-    
-    .rst(rst) {
-      fsm state = {INIT, PC, INST, IMM};
+    .rst(rst)  {
+      dff mode_switch_timeout[25];
+      fsm state = {MENU, PC, INST, IMM};
       ioshield_seven_segment_controller seg;
     }
   }
   
+  const MODE_STABLE = 0;
+  const MODE_CHANGED = 1;
+    
   always {
-    run = run_switch_cond.out | step_btn_rising.out;
+    // Map the buttons to their event processors
+    up_btn_event.in = io_button[0];
+    center_btn_event.in = io_button[1];
+    down_btn_event.in = io_button[2];
+    left_btn_event.in = io_button[3];
+    right_btn_event.in = io_button[4];
+    
+    led = 8h0;
+    run = 0;
     
     // Show the debug address on the 7 segment display    
     io_seg = seg.io_seg;
@@ -51,49 +51,67 @@ module ioshield_debugger (
     seg.display_mode = 4b0000;
     seg.ascii_data = 4x{{8h0}};
     seg.blink = 0;
-    led = 8h0;
     io_led = 3x{{8h0}};
     
-    // The "Up" button changes display modes
-    if (mode_btn_rising.out) {
-      case (state.q) {
-        state.PC: state.d = state.INST;
-        state.INST: state.d = state.IMM;
-        state.IMM: state.d = state.PC;
-      }
+    // Increment a counter until it rolls around to zero
+    if (mode_switch_timeout.q != MODE_STABLE) {
+      mode_switch_timeout.d = mode_switch_timeout.q + 1;
     }
     
-    // When the PC is stepped, switch to PC display mode
-    if (step_btn_rising.out) {
-      state.d = state.PC;
-    }
-    
-    case (state.q) {
+    case (state.q) {        
       state.MENU:
-        seg.ascii_data[3] = ".";
-        seg.ascii_data[2] = ".;
+        seg.ascii_data[3] = "r";
+        seg.ascii_data[2] = "u";
+        seg.ascii_data[1] = "n";
+        seg.ascii_data[0] = " ";
+        seg.display_mode = 4b1111;
+        
+        // When the right button is pressed change to the next mode and reset the counter
+        if (right_btn_event.pressed) {
+          state.d = state.PC;
+          mode_switch_timeout.d = MODE_CHANGED;
+        }
       
       state.PC:
+        if (mode_switch_timeout.q != MODE_STABLE) {
+          seg.ascii_data[3] = "p";
+          seg.ascii_data[2] = "c";
+          seg.ascii_data[1] = " ";
+          seg.ascii_data[0] = " ";
+          seg.display_mode = 4b1111;
+        } else {
+          seg.data = debug_address;  
+        }
+          
         // Show the debug data bus on the leds
         // (24 least significant bits on io shield, 8 most significant on base board)    
-        seg.data = debug_address[15:0];
-        io_led[0] = debug_data[7:0];
-        io_led[1] = debug_data[15:8];
-        io_led[2] = debug_data[23:16];
-        led = debug_data[31:24];
+        io_led[0] = debug_address[7:0];
+        io_led[1] = debug_address[15:8];
+        
+        // When the left button is pressed change to the previous mode
+        if (left_btn_event.pressed) {
+          state.d = state.MENU;
+          mode_switch_timeout.d = MODE_CHANGED;
+        }
+        
+        // When the right button is pressed change to the next mode
+        if (right_btn_event.pressed) {
+          state.d = state.INST;
+          mode_switch_timeout.d = MODE_CHANGED;
+        }
         
       state.INST:
-        seg.data = debug_opcode;
         seg.ascii_data[3] = "i";
         seg.ascii_data[2] = "n";
-        seg.display_mode = 4b1100;
-      
-      state.IMM:
-        seg.data = debug_imm[15:0];
-        io_led[0] = debug_imm[7:0];
-        io_led[1] = debug_imm[15:8];
-        io_led[2] = debug_imm[23:16];
-        led = debug_imm[31:24];
+        seg.ascii_data[1] = " ";
+        seg.display_mode = 4b1110;
+        seg.data = debug_opcode;
+        
+        // When the left button is pressed change to the previous mode
+        if (left_btn_event.pressed) {
+          state.d = state.PC;
+          mode_switch_timeout.d = MODE_CHANGED;
+        }
     }
     
     if (exception) {

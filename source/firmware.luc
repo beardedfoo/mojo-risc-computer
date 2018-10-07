@@ -1,14 +1,13 @@
 module firmware (
     input clk,  // clock
     input rst,  // reset
-    input address[32],
-    output data[32]
+    input address[16],
+    output data[16]
   ) {
 
   always {
     case (address) {
-      h00000000: data = c{1b1, 10b1111111110, 1b1, 8b11111111, 5h0, Opcode.JAL};
-      hFFFFFFFc: data = c{1b0, 10b0000000010, 1b0, 8b00000000, 5h0, Opcode.JAL};
+      h0000: data = c{Opcode.ADD, Opcode.REG1, Opcode.REG2, 7h0};
       default: data = 0;
     }
   }

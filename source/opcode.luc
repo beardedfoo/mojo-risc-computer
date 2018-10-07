@@ -1,3 +1,19 @@
 global Opcode {
-  const JAL = 7b1101111;  
+  const ADD = 3b000;
+  const ADDI = 3b001;
+  const NAND = 3b010;
+  const LUI = 3b011;
+  const SW = 3b101;
+  const LW = 3b100;
+  const BEQ = 3b110;
+  const JALR = 3b111;
+  
+  const REG0 = 3h0;
+  const REG1 = 3h1;
+  const REG2 = 3h2;
+  const REG3 = 3h3;
+  const REG4 = 3h4;
+  const REG5 = 3h5;
+  const REG6 = 3h6;
+  const REG7 = 3h7;
 }

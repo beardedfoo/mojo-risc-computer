@@ -44,7 +44,8 @@ module mojo_top (
     debugger.io_button = io_button;
     debugger.debug_address = m.debug_address;
     debugger.debug_data = m.debug_data;
-    debugger.debug_imm = m.debug_imm;
+    debugger.debug_imm7 = m.debug_imm7;
+    debugger.debug_imm10 = m.debug_imm10;
     debugger.debug_opcode = m.debug_opcode;
     debugger.exception = m.debug_exception;
     led = debugger.led;

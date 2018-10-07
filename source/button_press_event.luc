@@ -1,0 +1,20 @@
+module button_press_event (
+    input clk,  // clock
+    input in,
+    output pressed
+  ) {
+  
+  .clk(clk) {
+    button_conditioner cond;
+  }
+  
+  .clk(clk) {
+    edge_detector edge(#RISE(1), #FALL(0));
+  }
+
+  always {
+    cond.in = in;
+    edge.in = cond.out;
+    pressed = edge.out;
+  }
+}
