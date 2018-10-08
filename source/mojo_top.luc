@@ -25,9 +25,10 @@ module mojo_top (
     // clock. This ensures the entire FPGA comes out of reset at the same time.
     reset_conditioner reset_cond;
     
+    // The master reset button goes into the debugger
     .rst(rst) {
-      machine m;
       ioshield_debugger debugger;
+      machine m;
     }
   }
   

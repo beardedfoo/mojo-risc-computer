@@ -36,11 +36,14 @@ module ioshield_debugger (
     // The submodes for the decoder debug mode
     fsm decoder_submode = {INST, OP, REG_A, REG_B, REG_C};
     
+    // The possible control mode actions
+    fsm control_actions = {RUN};
+    
     // A timer which is 0 when the user has not recently switched debug modes
     dff mode_switch_timeout[25];
     
     // The main debug modes
-    fsm state = {MENU, RUN, EXCEPTION, REGISTER, DECODER};
+    fsm state = {REGISTER, CONTROL, RUNNING, EXCEPTION, DECODER};
     
     // A controller for the seven segment display on the IO shield
     ioshield_seven_segment_controller seg;
@@ -75,28 +78,36 @@ module ioshield_debugger (
     }
     
     case (state.q) {   
-      state.MENU:
-        seg.ascii_data[3] = "r";
-        seg.ascii_data[2] = "u";
-        seg.ascii_data[1] = "n";
-        seg.ascii_data[0] = " ";
-        seg.display_mode = 4b1111;
+      state.CONTROL:
+        case (control_actions.q) {
+          // This menu item puts the machine into a running state
+          control_actions.RUN:
+            // Enable ASCII display on all digits and show "run" on the screen
+            seg.ascii_data[3] = "r";
+            seg.ascii_data[2] = "u";
+            seg.ascii_data[1] = "n";
+            seg.ascii_data[0] = " ";
+            seg.display_mode = 4b1111;
+            
+            // When the center button is pressed put the CPU in a running state
+            if (center_btn_event.pressed) {
+              enable_run.d = 1;
+              mode_switch_timeout.d = MODE_CHANGED;
+              state.d = state.RUNNING;
+            }
+        }
         
         // When the right button is pressed change to the next mode and reset the counter
         if (right_btn_event.pressed) {
           state.d = state.REGISTER;
           mode_switch_timeout.d = MODE_CHANGED;
         }
-        
-        if (center_btn_event.pressed) {
-          enable_run.d = 1;
-          mode_switch_timeout.d = MODE_CHANGED;
-          state.d = state.RUN;
-        }
       
       state.REGISTER:
         case (register_submode.q) {
+          // This mode inspects the value of the PC register
           register_submode.PC:
+            // Initially show "PC" on the screen, then show the value in PC after
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "p";
               seg.ascii_data[2] = "c";
@@ -111,12 +122,15 @@ module ioshield_debugger (
             io_led[0] = debug_address[7:0];
             io_led[1] = debug_address[15:8];
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R0;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R0 register
           register_submode.R0:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -127,19 +141,24 @@ module ioshield_debugger (
               seg.data = debug_registers[0];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][0] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.PC;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R1;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R1 register
           register_submode.R1:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -150,19 +169,24 @@ module ioshield_debugger (
               seg.data = debug_registers[1];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][1] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R0;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R2;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+          // This mode inspects the value of the R2 register
           register_submode.R2:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -173,19 +197,24 @@ module ioshield_debugger (
               seg.data = debug_registers[2];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][2] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R1;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R3;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R3 register
           register_submode.R3:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -196,19 +225,24 @@ module ioshield_debugger (
               seg.data = debug_registers[3];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][3] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R2;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R4;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R4 register  
           register_submode.R4:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -219,19 +253,24 @@ module ioshield_debugger (
               seg.data = debug_registers[4];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][4] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R3;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R5;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R5 register
           register_submode.R5:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -242,19 +281,24 @@ module ioshield_debugger (
               seg.data = debug_registers[5];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][5] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R4;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R6;
               mode_switch_timeout.d = MODE_CHANGED;
             }
-            
+          
+          // This mode inspects the value of the R6 register
           register_submode.R6:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -265,19 +309,24 @@ module ioshield_debugger (
               seg.data = debug_registers[6];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][6] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R5;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+            // Inspect the next register when the down button is pressed
             if (down_btn_event.pressed) {
               register_submode.d = register_submode.R7;
               mode_switch_timeout.d = MODE_CHANGED;
             }
             
+          // This mode inspects the value of the R7 register
           register_submode.R7:
+            // Initially show the register being inspected on the screen, then show its stored value
             if (mode_switch_timeout.q != MODE_STABLE) {
               seg.ascii_data[3] = "r";
               seg.ascii_data[1] = " ";
@@ -288,8 +337,10 @@ module ioshield_debugger (
               seg.data = debug_registers[7];
             }
             
+            // Show the register currently being inspected on the io_led[0] strip
             io_led[0][7] = 1;
             
+            // Inspect the previous register when the up button is pressed
             if (up_btn_event.pressed) {
               register_submode.d = register_submode.R6;
               mode_switch_timeout.d = MODE_CHANGED;
@@ -298,7 +349,7 @@ module ioshield_debugger (
         
         // When the left button is pressed change to the previous mode
         if (left_btn_event.pressed) {
-          state.d = state.MENU;
+          state.d = state.CONTROL;
           mode_switch_timeout.d = MODE_CHANGED;
         }
         
@@ -404,9 +455,9 @@ module ioshield_debugger (
           mode_switch_timeout.d = MODE_CHANGED;
         }
         
-      state.RUN:
+      state.RUNNING:
         seg.ascii_data = "....";
-        seg.display_mode = 4b1111;
+        seg.display_mode = 4b1111; 
         
         if (exception) {
           state.d = state.EXCEPTION;
