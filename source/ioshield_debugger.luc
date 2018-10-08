@@ -80,6 +80,27 @@ module ioshield_debugger (
       mode_switch_timeout.d = mode_switch_timeout.q + 1;
     }
     
+    // When the center button is pressed in the debug modes, activate the last selected control action
+    if (state.q != state.RUNNING && state.q != state.EXCEPTION && center_btn_event.pressed) {
+      case (control_actions.q) {
+        control_actions.RUN:
+          enable_run.d = 1;
+          mode_switch_timeout.d = MODE_CHANGED;
+          state.d = state.RUNNING;
+          
+        control_actions.STEP:
+          // Enable run in this state (will change next cycle)
+          run = 1;
+          
+          // Switch into the register view debug mode
+          state.d = state.REGISTER;
+          mode_switch_timeout.d = MODE_CHANGED;
+          
+          // Start the register view mode by inspecting the PC register
+          register_submode.d = register_submode.PC;
+      }
+    }
+    
     case (state.q) {   
       state.CONTROL:
         case (control_actions.q) {
@@ -91,13 +112,6 @@ module ioshield_debugger (
             seg.ascii_data[1] = "n";
             seg.ascii_data[0] = " ";
             seg.display_mode = 4b1111;
-            
-            // When the center button is pressed put the CPU in a running state
-            if (center_btn_event.pressed) {
-              enable_run.d = 1;
-              mode_switch_timeout.d = MODE_CHANGED;
-              state.d = state.RUNNING;
-            }
             
             // When the down button is pressed offer the STEP control action
             if (down_btn_event.pressed) {
@@ -112,19 +126,6 @@ module ioshield_debugger (
             seg.ascii_data[1] = "e";
             seg.ascii_data[0] = "p";
             seg.display_mode = 4b1111;
-            
-            // When the center button is pressed step the cpu for one cycle
-            if (center_btn_event.pressed) {
-              // Enable run in this state (will change next cycle)
-              run = 1;
-              
-              // Switch into the register view debug mode
-              state.d = state.REGISTER;
-              mode_switch_timeout.d = MODE_CHANGED;
-              
-              // Start the register view mode by inspecting the PC register
-              register_submode.d = register_submode.PC;
-            }
             
             // When the up button is pressed offer the RUN control action
             if (up_btn_event.pressed) {
