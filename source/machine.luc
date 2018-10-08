@@ -52,6 +52,12 @@ module machine (
               if (inst_dec.regA != 0) {
                 gp_regs.d[inst_dec.regA] = gp_regs.q[inst_dec.regB] + gp_regs.q[inst_dec.regC];
               }
+              
+            Opcode.ADDI:
+              pc.d = pc.q + 1;
+              if (inst_dec.regA != 0) {
+                gp_regs.d[inst_dec.regA] = gp_regs.q[inst_dec.regB] + inst_dec.imm7;
+              }
             
             default:
               pc.d = pc.q;

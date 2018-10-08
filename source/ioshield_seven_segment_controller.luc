@@ -71,9 +71,11 @@ module ioshield_seven_segment_controller (
         "p": io_seg = 8b10001100;
         "r": io_seg = 8b10101111;
         "s": io_seg = 8b10010010;
+        "t": io_seg = 8b10111011;
         "n": io_seg = 8b10101011;
         "u": io_seg = 8b11100011;
         " ": io_seg = 8b11111111;
+        "-": io_seg = 8b10111111;
         ".": io_seg = 8b01111111;
         default: io_seg = 8b00111111;
       }

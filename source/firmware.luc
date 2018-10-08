@@ -5,10 +5,13 @@ module firmware (
     output data[16]
   ) {
 
-  always {
+  always {    
     case (address) {
-      h0000: data = c{Opcode.ADD, Opcode.REG1, Opcode.REG2, 4h0, Opcode.REG3};
-      default: data = 0;
+      h0000: data = c{Opcode.ADDI, Opcode.REG2, Opcode.REG0, 7h2};
+      h0001: data = c{Opcode.ADD, Opcode.REG1, Opcode.REG2, 4h0, Opcode.REG3};
+      
+      default:
+        data = 0;
     }
   }
 }

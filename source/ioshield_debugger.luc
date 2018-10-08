@@ -34,10 +34,10 @@ module ioshield_debugger (
     fsm register_submode = {PC, R0, R1, R2, R3, R4, R5, R6, R7};
     
     // The submodes for the decoder debug mode
-    fsm decoder_submode = {INST, OP, REG_A, REG_B, REG_C};
+    fsm decoder_submode = {INST, OP, REG_A, REG_B, REG_C, IMM7};
     
     // The possible control mode actions
-    fsm control_actions = {RUN};
+    fsm control_actions = {RUN, STEP};
     
     // A timer which is 0 when the user has not recently switched debug modes
     dff mode_switch_timeout[25];
@@ -49,8 +49,11 @@ module ioshield_debugger (
     ioshield_seven_segment_controller seg;
   }
   
-  const MODE_STABLE = 0;
-  const MODE_CHANGED = 1;
+  // MODE_STABLE indicates that the debug mode has not been changed "recently"
+  const MODE_STABLE = 25b1111111111111111111111111;
+  
+  // MODE_CHANGED indicates that the debug mode has been changed "recently"
+  const MODE_CHANGED = 0;
     
   always {
     // Map the buttons to their event processors
@@ -72,7 +75,7 @@ module ioshield_debugger (
     seg.blink = 0;
     io_led = 3x{{8h0}};
     
-    // Increment a counter until it rolls around to zero
+    // Increment a counter until it rolls around to the MODE_STABLE value
     if (mode_switch_timeout.q != MODE_STABLE) {
       mode_switch_timeout.d = mode_switch_timeout.q + 1;
     }
@@ -94,6 +97,39 @@ module ioshield_debugger (
               enable_run.d = 1;
               mode_switch_timeout.d = MODE_CHANGED;
               state.d = state.RUNNING;
+            }
+            
+            // When the down button is pressed offer the STEP control action
+            if (down_btn_event.pressed) {
+              mode_switch_timeout.d = MODE_CHANGED;
+              control_actions.d = control_actions.STEP;
+            }
+            
+          control_actions.STEP:
+            // Enable ASCII display on all digits and show "stp" (sort of) on the screen
+            seg.ascii_data[3] = "s";
+            seg.ascii_data[2] = "t";
+            seg.ascii_data[1] = "-";
+            seg.ascii_data[0] = "p";
+            seg.display_mode = 4b1111;
+            
+            // When the center button is pressed step the cpu for one cycle
+            if (center_btn_event.pressed) {
+              // Enable run in this state (will change next cycle)
+              run = 1;
+              
+              // Switch into the register view debug mode
+              state.d = state.REGISTER;
+              mode_switch_timeout.d = MODE_CHANGED;
+              
+              // Start the register view mode by inspecting the PC register
+              register_submode.d = register_submode.PC;
+            }
+            
+            // When the up button is pressed offer the RUN control action
+            if (up_btn_event.pressed) {
+              mode_switch_timeout.d = MODE_CHANGED;
+              control_actions.d = control_actions.RUN;
             }
         }
         
@@ -370,6 +406,13 @@ module ioshield_debugger (
                 seg.ascii_data[0] = " ";
                 seg.display_mode = 4b1111;
                 
+              Opcode.ADDI:
+                seg.ascii_data[3] = "a";
+                seg.ascii_data[2] = "d";
+                seg.ascii_data[1] = "d";
+                seg.ascii_data[0] = "i";
+                seg.display_mode = 4b1111;
+                
               default:
                 seg.ascii_data[3] = "-";
                 seg.ascii_data[2] = "-";
@@ -447,6 +490,27 @@ module ioshield_debugger (
               decoder_submode.d = decoder_submode.REG_B;
               mode_switch_timeout.d = MODE_CHANGED;
             }
+            
+            if (down_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.IMM7;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          decoder_submode.IMM7:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "i";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0700;
+            } else {
+              seg.data = debug_imm7;
+            }
+            
+            if (up_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.REG_C;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
         }
         
         // When the left button is pressed change to the previous mode
@@ -456,9 +520,24 @@ module ioshield_debugger (
         }
         
       state.RUNNING:
+        // Show the ASCII string "...." on the screen while the cpu is running
         seg.ascii_data = "....";
-        seg.display_mode = 4b1111; 
+        seg.display_mode = 4b1111;
         
+        // When the center button is pressed, drop into the debugger
+        if (center_btn_event.pressed) {
+          // Stop the CPU from processing more instructions
+          enable_run.d = 0;
+          
+          // Change into register view mode
+          mode_switch_timeout.d = MODE_CHANGED;
+          state.d = state.REGISTER;
+          
+          // View the PC register initially
+          register_submode.d = register_submode.PC;
+        }
+        
+        // When the machine encounters an exception switch into a mode which handles that
         if (exception) {
           state.d = state.EXCEPTION;
           mode_switch_timeout.d = MODE_CHANGED;
