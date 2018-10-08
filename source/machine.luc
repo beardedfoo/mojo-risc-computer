@@ -45,10 +45,14 @@ module machine (
     
     case (state.q) {
       state.NORMAL:
-        if (run) {
-          pc.d = pc.q + 1;
-                    
+        if (run) {                    
           case (inst_dec.op) {
+            Opcode.ADD:
+              pc.d = pc.q + 1;
+              if (inst_dec.regA != 0) {
+                gp_regs.d[inst_dec.regA] = gp_regs.q[inst_dec.regB] + gp_regs.q[inst_dec.regC];
+              }
+            
             default:
               pc.d = pc.q;
               debug_exception = 1;
