@@ -19,7 +19,7 @@ module ioshield_debugger (
     output led[8],
     output run
   ) {
-  .clk(clk) {
+  .clk(clk), .rst(rst)  {
     // Condition the step button input and watch for rising edges
     button_press_event center_btn_event;
     button_press_event up_btn_event;
@@ -27,13 +27,23 @@ module ioshield_debugger (
     button_press_event left_btn_event;
     button_press_event right_btn_event;
     
-    .rst(rst)  {
-      fsm register_submode = {PC, R0, R1, R2, R3, R4, R5, R6, R7};
-      fsm decoder_submode = {OP, REG_A, REG_B, REG_C};
-      dff mode_switch_timeout[25];
-      fsm state = {MENU, REGISTER, DECODER};
-      ioshield_seven_segment_controller seg;
-    }
+    // When set the cpu is made to run
+    dff enable_run;
+
+    // The submodes for the register view debug mode
+    fsm register_submode = {PC, R0, R1, R2, R3, R4, R5, R6, R7};
+    
+    // The submodes for the decoder debug mode
+    fsm decoder_submode = {INST, OP, REG_A, REG_B, REG_C};
+    
+    // A timer which is 0 when the user has not recently switched debug modes
+    dff mode_switch_timeout[25];
+    
+    // The main debug modes
+    fsm state = {MENU, RUN, EXCEPTION, REGISTER, DECODER};
+    
+    // A controller for the seven segment display on the IO shield
+    ioshield_seven_segment_controller seg;
   }
   
   const MODE_STABLE = 0;
@@ -48,7 +58,7 @@ module ioshield_debugger (
     right_btn_event.in = io_button[4];
     
     led = 8h0;
-    run = 0;
+    run = enable_run.q;
     
     // Show the debug address on the 7 segment display    
     io_seg = seg.io_seg;
@@ -64,7 +74,7 @@ module ioshield_debugger (
       mode_switch_timeout.d = mode_switch_timeout.q + 1;
     }
     
-    case (state.q) {        
+    case (state.q) {   
       state.MENU:
         seg.ascii_data[3] = "r";
         seg.ascii_data[2] = "u";
@@ -76,6 +86,12 @@ module ioshield_debugger (
         if (right_btn_event.pressed) {
           state.d = state.REGISTER;
           mode_switch_timeout.d = MODE_CHANGED;
+        }
+        
+        if (center_btn_event.pressed) {
+          enable_run.d = 1;
+          mode_switch_timeout.d = MODE_CHANGED;
+          state.d = state.RUN;
         }
       
       state.REGISTER:
@@ -294,6 +310,28 @@ module ioshield_debugger (
         
       state.DECODER:
         case (decoder_submode.q) {
+          decoder_submode.INST:
+            case (debug_opcode) {
+              Opcode.ADD:
+                seg.ascii_data[3] = "a";
+                seg.ascii_data[2] = "d";
+                seg.ascii_data[1] = "d";
+                seg.ascii_data[0] = " ";
+                seg.display_mode = 4b1111;
+                
+              default:
+                seg.ascii_data[3] = "-";
+                seg.ascii_data[2] = "-";
+                seg.ascii_data[1] = "-";
+                seg.ascii_data[0] = "-";
+                seg.display_mode = 4b1111;
+            }
+            
+            if (down_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.OP;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+          
           decoder_submode.OP:
             seg.ascii_data[3] = "o";
             seg.ascii_data[2] = "p";
@@ -301,8 +339,14 @@ module ioshield_debugger (
             seg.display_mode = 4b1110;
             seg.data = debug_opcode;
             
+            if (up_btn_event.pressed) {
+              decoder_submode.d = decoder_submode.INST;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
             if (down_btn_event.pressed) {
               decoder_submode.d = decoder_submode.REG_A;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
             
           decoder_submode.REG_A:
@@ -314,11 +358,13 @@ module ioshield_debugger (
             
             if (up_btn_event.pressed) {
               decoder_submode.d = decoder_submode.OP;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
             
             
             if (down_btn_event.pressed) {
               decoder_submode.d = decoder_submode.REG_B;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
             
           decoder_submode.REG_B:
@@ -330,11 +376,13 @@ module ioshield_debugger (
             
             if (up_btn_event.pressed) {
               decoder_submode.d = decoder_submode.REG_A;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
             
             
             if (down_btn_event.pressed) {
               decoder_submode.d = decoder_submode.REG_C;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
             
           decoder_submode.REG_C:
@@ -346,6 +394,7 @@ module ioshield_debugger (
             
             if (up_btn_event.pressed) {
               decoder_submode.d = decoder_submode.REG_B;
+              mode_switch_timeout.d = MODE_CHANGED;
             }
         }
         
@@ -354,10 +403,39 @@ module ioshield_debugger (
           state.d = state.REGISTER;
           mode_switch_timeout.d = MODE_CHANGED;
         }
-    }
-    
-    if (exception) {
-      seg.blink = 1;
+        
+      state.RUN:
+        seg.ascii_data = "....";
+        seg.display_mode = 4b1111;
+        
+        if (exception) {
+          state.d = state.EXCEPTION;
+          mode_switch_timeout.d = MODE_CHANGED;
+        }
+        
+      state.EXCEPTION:
+        // Enable ASCII mode on all four digits and show "Err" on the screen
+        seg.ascii_data[3] = "e";
+        seg.ascii_data[2] = "r";
+        seg.ascii_data[1] = "r";
+        seg.ascii_data[0] = " ";
+        seg.display_mode = 4b1111;
+        
+        // Blink the display to grab the user's attention
+        seg.blink = 1;
+        
+        // The run pin should no longer be active
+        enable_run.d = 0;
+
+        // By pressing the center button the user acknowledges the exception and enters the debugger
+        if (center_btn_event.pressed) {
+          // Enter the debugger in the register view mode
+          state.d = state.REGISTER;
+          mode_switch_timeout.d = MODE_CHANGED;
+          
+          // Start the register view mode by inspecting the PC register
+          register_submode.d = register_submode.PC;
+        }
     }
   }
 }

@@ -1,5 +1,6 @@
 module button_press_event (
     input clk,  // clock
+    input rst,
     input in,
     output pressed
   ) {
