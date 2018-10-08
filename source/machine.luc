@@ -10,7 +10,8 @@ module machine (
     output debug_regA[3],
     output debug_regB[3],
     output debug_regC[3],
-    output debug_exception
+    output debug_exception,
+    output debug_registers[8][16]
   ) {
 
   .clk(clk), .rst(rst) {
@@ -37,6 +38,7 @@ module machine (
     debug_regB = inst_dec.regB;
     debug_regC = inst_dec.regC;
     debug_exception = 0;
+    debug_registers = gp_regs.q;
     
     rom.address = pc.q;
     inst = rom.data;

@@ -65,6 +65,7 @@ module ioshield_seven_segment_controller (
         "b": io_seg = 8b10000011;
         "c": io_seg = 8b10100111;
         "i": io_seg = 8b11111011;
+        "o": io_seg = 8b10100011;
         "p": io_seg = 8b10001100;
         "r": io_seg = 8b10101111;
         "n": io_seg = 8b10101011;

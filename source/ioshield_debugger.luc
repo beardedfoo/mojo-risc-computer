@@ -6,6 +6,7 @@ module ioshield_debugger (
     input debug_imm7[7],
     input debug_imm10[10],
     input debug_data[16],
+    input debug_registers[8][16],
     input debug_regA[3],
     input debug_regB[3],
     input debug_regC[3],
@@ -27,9 +28,10 @@ module ioshield_debugger (
     button_press_event right_btn_event;
     
     .rst(rst)  {
-      fsm decoder_submode = {INST, REG_A, REG_B, REG_C};
+      fsm register_submode = {PC, R0, R1, R2, R3, R4, R5, R6, R7};
+      fsm decoder_submode = {OP, REG_A, REG_B, REG_C};
       dff mode_switch_timeout[25];
-      fsm state = {MENU, PC, DECODER};
+      fsm state = {MENU, REGISTER, DECODER};
       ioshield_seven_segment_controller seg;
     }
   }
@@ -72,25 +74,211 @@ module ioshield_debugger (
         
         // When the right button is pressed change to the next mode and reset the counter
         if (right_btn_event.pressed) {
-          state.d = state.PC;
+          state.d = state.REGISTER;
           mode_switch_timeout.d = MODE_CHANGED;
         }
       
-      state.PC:
-        if (mode_switch_timeout.q != MODE_STABLE) {
-          seg.ascii_data[3] = "p";
-          seg.ascii_data[2] = "c";
-          seg.ascii_data[1] = " ";
-          seg.ascii_data[0] = " ";
-          seg.display_mode = 4b1111;
-        } else {
-          seg.data = debug_address;  
+      state.REGISTER:
+        case (register_submode.q) {
+          register_submode.PC:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "p";
+              seg.ascii_data[2] = "c";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1111;
+            } else {
+              seg.data = debug_address;  
+            }
+              
+            // Show the debug data bus on the leds
+            io_led[0] = debug_address[7:0];
+            io_led[1] = debug_address[15:8];
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R0;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R0:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0000;
+            } else {
+              seg.data = debug_registers[0];
+            }
+            
+            io_led[0][0] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.PC;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R1;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R1:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0100;
+            } else {
+              seg.data = debug_registers[1];
+            }
+            
+            io_led[0][1] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R0;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R2;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R2:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0200;
+            } else {
+              seg.data = debug_registers[2];
+            }
+            
+            io_led[0][2] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R1;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R3;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R3:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0300;
+            } else {
+              seg.data = debug_registers[3];
+            }
+            
+            io_led[0][3] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R2;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R4;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R4:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0400;
+            } else {
+              seg.data = debug_registers[4];
+            }
+            
+            io_led[0][4] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R3;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R5;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R5:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0500;
+            } else {
+              seg.data = debug_registers[5];
+            }
+            
+            io_led[0][5] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R4;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R6;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R6:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0600;
+            } else {
+              seg.data = debug_registers[6];
+            }
+            
+            io_led[0][6] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R5;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+            if (down_btn_event.pressed) {
+              register_submode.d = register_submode.R7;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
+            
+          register_submode.R7:
+            if (mode_switch_timeout.q != MODE_STABLE) {
+              seg.ascii_data[3] = "r";
+              seg.ascii_data[1] = " ";
+              seg.ascii_data[0] = " ";
+              seg.display_mode = 4b1011;
+              seg.data = 16h0700;
+            } else {
+              seg.data = debug_registers[7];
+            }
+            
+            io_led[0][7] = 1;
+            
+            if (up_btn_event.pressed) {
+              register_submode.d = register_submode.R6;
+              mode_switch_timeout.d = MODE_CHANGED;
+            }
         }
-          
-        // Show the debug data bus on the leds
-        // (24 least significant bits on io shield, 8 most significant on base board)    
-        io_led[0] = debug_address[7:0];
-        io_led[1] = debug_address[15:8];
         
         // When the left button is pressed change to the previous mode
         if (left_btn_event.pressed) {
@@ -106,9 +294,9 @@ module ioshield_debugger (
         
       state.DECODER:
         case (decoder_submode.q) {
-          decoder_submode.INST:
-            seg.ascii_data[3] = "i";
-            seg.ascii_data[2] = "n";
+          decoder_submode.OP:
+            seg.ascii_data[3] = "o";
+            seg.ascii_data[2] = "p";
             seg.ascii_data[1] = " ";
             seg.display_mode = 4b1110;
             seg.data = debug_opcode;
@@ -125,7 +313,7 @@ module ioshield_debugger (
             seg.data = debug_regA;
             
             if (up_btn_event.pressed) {
-              decoder_submode.d = decoder_submode.INST;
+              decoder_submode.d = decoder_submode.OP;
             }
             
             
@@ -163,7 +351,7 @@ module ioshield_debugger (
         
         // When the left button is pressed change to the previous mode
         if (left_btn_event.pressed) {
-          state.d = state.PC;
+          state.d = state.REGISTER;
           mode_switch_timeout.d = MODE_CHANGED;
         }
     }
