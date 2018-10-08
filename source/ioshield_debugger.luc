@@ -109,7 +109,7 @@ module ioshield_debugger (
             // Enable ASCII display on all digits and show "stp" (sort of) on the screen
             seg.ascii_data[3] = "s";
             seg.ascii_data[2] = "t";
-            seg.ascii_data[1] = "-";
+            seg.ascii_data[1] = "e";
             seg.ascii_data[0] = "p";
             seg.display_mode = 4b1111;
             
@@ -413,6 +413,13 @@ module ioshield_debugger (
                 seg.ascii_data[0] = "i";
                 seg.display_mode = 4b1111;
                 
+              Opcode.JALR:
+                seg.ascii_data[3] = "j";
+                seg.ascii_data[2] = "a";
+                seg.ascii_data[1] = "l";
+                seg.ascii_data[0] = "r";
+                seg.display_mode = 4b1111;
+                
               default:
                 seg.ascii_data[3] = "-";
                 seg.ascii_data[2] = "-";
@@ -523,6 +530,10 @@ module ioshield_debugger (
         // Show the ASCII string "...." on the screen while the cpu is running
         seg.ascii_data = "....";
         seg.display_mode = 4b1111;
+        
+        // Show the instruction address pattern (animated) on the IO shield panel
+        io_led[0] = debug_address[7:0];
+        io_led[1] = debug_address[15:8];
         
         // When the center button is pressed, drop into the debugger
         if (center_btn_event.pressed) {

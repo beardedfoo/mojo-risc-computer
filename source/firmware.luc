@@ -8,7 +8,8 @@ module firmware (
   always {    
     case (address) {
       h0000: data = c{Opcode.ADDI, Opcode.REG2, Opcode.REG0, 7h2};
-      h0001: data = c{Opcode.ADD, Opcode.REG1, Opcode.REG2, 4h0, Opcode.REG3};
+      h0001: data = c{Opcode.ADD,  Opcode.REG1, Opcode.REG2, 4h0, Opcode.REG3};
+      h0002: data = c{Opcode.JALR, Opcode.REG0, Opcode.REG0, 7b0};
       
       default:
         data = 0;

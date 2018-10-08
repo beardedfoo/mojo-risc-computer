@@ -58,6 +58,12 @@ module machine (
               if (inst_dec.regA != 0) {
                 gp_regs.d[inst_dec.regA] = gp_regs.q[inst_dec.regB] + inst_dec.imm7;
               }
+              
+            Opcode.JALR:
+              pc.d = gp_regs.q[inst_dec.regB];
+              if (inst_dec.regA != 0) {
+                gp_regs.d[inst_dec.regA] = pc.q + 1;
+              }
             
             default:
               pc.d = pc.q;
